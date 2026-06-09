@@ -1,96 +1,51 @@
 # Margin
 
-Margin is a minimal Markdown writing app for macOS, designed for writers who keep their work in an Obsidian vault.
+Margin 是一个 macOS Markdown 写作应用，用来把文章草稿直接沉淀到 Obsidian Vault。
 
-It provides a quiet writing surface, Markdown preview, document outline, slash commands, and native vault saving. The app writes standard `.md` files directly into a directory inside your Obsidian vault.
+当前版本是桌面应用原型：界面保持轻量，主写作区负责 Markdown 输入，右侧只保留文档目录，左侧负责选择 Vault、设置沉淀目录和保存状态。
 
-## Features
+## 当前设计
 
-- macOS desktop app built with Electron
-- Markdown editor with live preview
-- Outline panel generated from `#`, `##`, and `###` headings
-- Slash command menu triggered by `/`
-- Quick blocks for headings, quotes, lists, todos, code blocks, Obsidian callouts, and dividers
-- Native Obsidian vault folder picker
-- Saves Markdown files into a custom vault subdirectory, such as `Writing/Inbox`
-- Local draft persistence
-- Manual export as Markdown
-- Focus mode, edit/split view, word count, and reading time
+- 以 Markdown 写作为核心，支持实时预览。
+- 输入 `/` 可以快速插入大标题、小标题、引用、列表、待办、代码块、Obsidian Callout 和分割线。
+- 点击「选择 Vault」后，可以选择本机 Obsidian Vault 根目录。
+- 可以设置保存目录，例如 `Writing/Inbox`。
+- 开启「自动沉淀」后，内容会保存为 `.md` 文件并写入指定 Vault 目录。
+- 草稿会保存在本地应用存储中，不会上传到服务器。
 
-## Development
+## 项目说明
 
-Install dependencies:
+Margin 基于 Electron 实现：
+
+```text
+.
+├── index.html      # 界面和写作交互
+├── main.js         # macOS 应用壳、目录选择、文件写入
+├── preload.js      # 渲染层和主进程通信桥
+├── package.json
+└── README.md
+```
+
+## 运行
+
+安装依赖：
 
 ```bash
 npm install
 ```
 
-Run the app:
+启动应用：
 
 ```bash
 npm run dev
 ```
 
-Package a macOS build:
+打包 macOS 应用：
 
 ```bash
 npm run package:mac
 ```
 
-The packaged app will be generated under `dist/`.
+打包产物会生成在 `dist/` 目录下。
 
-Current local builds are unsigned. For public distribution, sign and notarize the app with an Apple Developer ID certificate.
-
-## Usage
-
-1. Launch Margin with `npm run dev` or open the packaged macOS app.
-2. Click `选择 Vault`.
-3. Select the root directory of your Obsidian vault.
-4. Set the target folder, for example `Writing/Inbox`.
-5. Write in Markdown. Margin autosaves to the selected vault when `自动沉淀` is enabled.
-
-The file name is generated from the document title and saved as Markdown.
-
-## Slash Commands
-
-Type `/` inside the editor to open the quick writing menu.
-
-Keyboard controls:
-
-- `ArrowUp` / `ArrowDown`: move through options
-- `Enter` / `Tab`: insert the selected block
-- `Esc`: close the menu
-
-Filtering examples:
-
-- `/h`
-- `/quote`
-- `/引用`
-- `/todo`
-
-## Project Structure
-
-```text
-.
-├── index.html
-├── main.js
-├── preload.js
-├── package.json
-└── README.md
-```
-
-## Notes
-
-Margin is local-first. Drafts are stored in local app storage, and Markdown files are written only to the vault directory you choose.
-
-The current version is an early desktop prototype. The UI is implemented in a single HTML file, while `main.js` and `preload.js` provide the macOS app shell and native file-system bridge.
-
-## Roadmap
-
-- Frontmatter templates
-- Obsidian wikilink and tag completion
-- Real recent-file loading from the vault
-- Multiple document tabs
-- Better Markdown rendering
-- Native app icon
-- Signed macOS release build
+当前本地构建未签名。如果要公开分发，需要使用 Apple Developer ID 证书签名并 notarize。
