@@ -297,6 +297,21 @@
       align-items: center;
     }
 
+    .field-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field-label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
     .mini-toggle {
       display: flex;
       align-items: center;
@@ -992,11 +1007,24 @@
           </div>
           <span class="tag">MD</span>
         </div>
-        <div class="path-row">
-          <input id="pathInput" class="path-input" value="Writing/Inbox" aria-label="沉淀目录">
-          <button id="saveNowBtn" class="icon-btn" type="button" title="立即保存" aria-label="立即保存">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
-          </button>
+        <div class="field-stack">
+          <label class="field-label">
+            <span>沉淀目录</span>
+            <div class="path-row">
+              <input id="pathInput" class="path-input" value="posts/{year}" aria-label="沉淀目录">
+              <button id="saveNowBtn" class="icon-btn" type="button" title="立即保存" aria-label="立即保存">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+              </button>
+            </div>
+          </label>
+          <label class="field-label">
+            <span>资源目录</span>
+            <input id="assetRootInput" class="path-input" value="public/images" aria-label="资源目录">
+          </label>
+          <label class="field-label">
+            <span>资源子目录</span>
+            <input id="assetGroupInput" class="path-input" value="{title}" aria-label="资源子目录">
+          </label>
         </div>
         <label class="mini-toggle">
           <span>自动沉淀</span>
@@ -1042,6 +1070,9 @@
           </button>
           <button class="format-btn" data-wrap="`" type="button" title="代码" aria-label="代码">
             <svg class="icon" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
+          </button>
+          <button id="importAssetBtn" class="format-btn" type="button" title="插入图片" aria-label="插入图片">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
           </button>
         </div>
 
@@ -1127,10 +1158,13 @@
     const preview = document.querySelector('#preview');
     const titleInput = document.querySelector('#titleInput');
     const pathInput = document.querySelector('#pathInput');
+    const assetRootInput = document.querySelector('#assetRootInput');
+    const assetGroupInput = document.querySelector('#assetGroupInput');
     const chooseVaultBtn = document.querySelector('#chooseVaultBtn');
     const exportBtn = document.querySelector('#exportBtn');
     const saveNowBtn = document.querySelector('#saveNowBtn');
     const newDocBtn = document.querySelector('#newDocBtn');
+    const importAssetBtn = document.querySelector('#importAssetBtn');
     const focusBtn = document.querySelector('#focusBtn');
     const editModeBtn = document.querySelector('#editModeBtn');
     const splitModeBtn = document.querySelector('#splitModeBtn');
@@ -1191,6 +1225,54 @@
 
     const currentFileName = () => `${slugify(titleInput.value)}.md`;
 
+    const currentFileBase = () => currentFileName().replace(/\.md$/i, '');
+
+    const dateParts = () => {
+      const now = new Date();
+      return {
+        year: String(now.getFullYear()),
+        month: String(now.getMonth() + 1).padStart(2, '0'),
+        day: String(now.getDate()).padStart(2, '0'),
+      };
+    };
+
+    const splitPath = (value) => String(value || '')
+      .split('/')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .filter((part) => part !== '.' && part !== '..');
+
+    const joinPath = (...parts) => parts
+      .flatMap((part) => splitPath(part))
+      .join('/');
+
+    const resolveTemplate = (value) => {
+      const date = dateParts();
+      return joinPath(String(value || '')
+        .replace(/\{title\}/g, currentFileBase())
+        .replace(/\{year\}/g, date.year)
+        .replace(/\{month\}/g, date.month)
+        .replace(/\{day\}/g, date.day));
+    };
+
+    const resolvedNotePath = () => resolveTemplate(pathInput.value);
+
+    const resolvedAssetDirectory = () => joinPath(
+      resolveTemplate(assetRootInput.value),
+      resolveTemplate(assetGroupInput.value),
+    );
+
+    const relativePath = (fromDir, targetFile) => {
+      const from = splitPath(fromDir);
+      const target = splitPath(targetFile);
+      while (from.length && target.length && from[0] === target[0]) {
+        from.shift();
+        target.shift();
+      }
+      const result = [...from.map(() => '..'), ...target].join('/');
+      return result || targetFile;
+    };
+
     const buildMarkdown = () => {
       const body = editor.value.trimStart();
       const title = titleInput.value.trim() || 'Untitled';
@@ -1213,6 +1295,8 @@
       localStorage.setItem(storageKey, JSON.stringify({
         title: titleInput.value,
         path: pathInput.value,
+        assetRoot: assetRootInput.value,
+        assetGroup: assetGroupInput.value,
         content: editor.value,
         autoSave: autoSaveToggle.checked,
         vaultPath: desktopVaultPath,
@@ -1228,6 +1312,8 @@
         const data = JSON.parse(saved);
         titleInput.value = data.title || titleInput.value;
         pathInput.value = data.path || pathInput.value;
+        assetRootInput.value = data.assetRoot || assetRootInput.value;
+        assetGroupInput.value = data.assetGroup || assetGroupInput.value;
         editor.value = data.content || editor.value;
         autoSaveToggle.checked = data.autoSave !== false;
         if (isDesktop && data.vaultPath) {
@@ -1395,7 +1481,7 @@
 
     const getTargetDirectory = async () => {
       if (!directoryHandle) return null;
-      const parts = pathInput.value.split('/').map((part) => part.trim()).filter(Boolean);
+      const parts = splitPath(resolvedNotePath());
       let current = directoryHandle;
       for (const part of parts) {
         current = await current.getDirectoryHandle(part, { create: true });
@@ -1413,7 +1499,7 @@
 
         const result = await window.marginApp.saveMarkdown({
           vaultPath: desktopVaultPath,
-          targetPath: pathInput.value,
+          targetPath: resolvedNotePath(),
           fileName: currentFileName(),
           content: buildMarkdown(),
         });
@@ -1434,7 +1520,7 @@
       const writable = await fileHandle.createWritable();
       await writable.write(buildMarkdown());
       await writable.close();
-      setSaveState(`已沉淀到 ${pathInput.value}/${currentFileName()}`);
+      setSaveState(`已沉淀到 ${resolvedNotePath()}/${currentFileName()}`);
       return true;
     };
 
@@ -1519,6 +1605,43 @@
       link.remove();
       URL.revokeObjectURL(url);
       showToast(`已导出 ${currentFileName()}`);
+    };
+
+    const insertAtCursor = (text) => {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      editor.setRangeText(text, start, end, 'end');
+      editor.focus();
+      render();
+      scheduleSave();
+    };
+
+    const importAsset = async () => {
+      if (!isDesktop) {
+        showToast('插入图片需要在 Mac 应用中使用');
+        return;
+      }
+
+      if (!desktopVaultPath) {
+        showToast('请先选择 Vault');
+        return;
+      }
+
+      try {
+        const result = await window.marginApp.importAsset({
+          vaultPath: desktopVaultPath,
+          assetDirectory: resolvedAssetDirectory(),
+        });
+
+        if (result.canceled) return;
+
+        const link = relativePath(resolvedNotePath(), result.vaultRelativePath);
+        insertAtCursor(`![${result.fileName}](${link})`);
+        showToast(`已导入 ${result.vaultRelativePath}`);
+      } catch (error) {
+        console.warn(error);
+        showToast('图片导入失败');
+      }
     };
 
     const getSlashTrigger = () => {
@@ -1714,7 +1837,7 @@
       editor.focus();
     };
 
-    document.querySelectorAll('.format-btn').forEach((button) => {
+    document.querySelectorAll('.format-btn[data-wrap], .format-btn[data-prefix]').forEach((button) => {
       button.addEventListener('click', () => insertMarkdown(button));
     });
 
@@ -1758,8 +1881,17 @@
       scheduleSave();
     });
 
+    assetRootInput.addEventListener('input', () => {
+      saveDraftToLocalStorage();
+    });
+
+    assetGroupInput.addEventListener('input', () => {
+      saveDraftToLocalStorage();
+    });
+
     chooseVaultBtn.addEventListener('click', chooseVault);
     exportBtn.addEventListener('click', exportMarkdown);
+    importAssetBtn.addEventListener('click', importAsset);
     saveNowBtn.addEventListener('click', async () => {
       try {
         const wrote = await writeToVault();

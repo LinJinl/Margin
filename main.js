@@ -40,6 +40,23 @@ const safeFileName = (value) => {
   return clean || 'untitled.md';
 };
 
+const uniqueFilePath = async (directory, fileName) => {
+  const extension = path.extname(fileName);
+  const stem = path.basename(fileName, extension);
+  let candidate = path.join(directory, fileName);
+  let index = 1;
+
+  while (true) {
+    try {
+      await fs.access(candidate);
+      candidate = path.join(directory, `${stem}-${index}${extension}`);
+      index += 1;
+    } catch {
+      return candidate;
+    }
+  }
+};
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {
@@ -149,5 +166,50 @@ ipcMain.handle('export-markdown', async (_event, payload) => {
   return {
     canceled: false,
     filePath: result.filePath,
+  };
+});
+
+ipcMain.handle('import-asset', async (_event, payload) => {
+  const rawVaultPath = String(payload.vaultPath || '').trim();
+  if (!rawVaultPath) {
+    throw new Error('Vault path is required');
+  }
+
+  const vaultPath = path.resolve(rawVaultPath);
+  const assetDirectory = path.resolve(vaultPath, ...safeSegments(payload.assetDirectory));
+
+  if (!isInside(vaultPath, assetDirectory)) {
+    throw new Error('Invalid asset directory');
+  }
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: '选择图片资源',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] },
+      { name: 'All Files', extensions: ['*'] },
+    ],
+  });
+
+  if (result.canceled || !result.filePaths.length) {
+    return { canceled: true };
+  }
+
+  const sourcePath = result.filePaths[0];
+  const fileName = safeFileName(path.basename(sourcePath));
+  await fs.mkdir(assetDirectory, { recursive: true });
+
+  const targetPath = await uniqueFilePath(assetDirectory, fileName);
+  if (!isInside(vaultPath, targetPath)) {
+    throw new Error('Invalid target path');
+  }
+
+  await fs.copyFile(sourcePath, targetPath);
+
+  return {
+    canceled: false,
+    fileName: path.basename(targetPath),
+    filePath: targetPath,
+    vaultRelativePath: path.relative(vaultPath, targetPath).split(path.sep).join('/'),
   };
 });
