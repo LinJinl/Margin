@@ -1,0 +1,1763 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Margin - Obsidian Markdown Writer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f5f2;
+      --surface: #ffffff;
+      --surface-2: #f8faf7;
+      --line: #dfe4dc;
+      --line-strong: #c7d0c2;
+      --text: #20251f;
+      --muted: #657064;
+      --soft: #7f8f81;
+      --accent: #2d7a5f;
+      --accent-2: #d65f3d;
+      --accent-3: #315c80;
+      --mark: #e9f3ed;
+      --shadow: 0 18px 42px rgba(32, 37, 31, .10);
+      --radius: 8px;
+      --sidebar: 276px;
+      --inspector: 260px;
+      --topbar: 62px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background:
+        linear-gradient(90deg, rgba(45, 122, 95, .04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(45, 122, 95, .04) 1px, transparent 1px),
+        var(--bg);
+      background-size: 34px 34px;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(420px, 1fr) var(--inspector);
+      grid-template-rows: var(--topbar) minmax(0, 1fr);
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      background: rgba(255, 255, 255, .86);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+      z-index: 20;
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: #20251f;
+      color: #fff;
+      box-shadow: inset 0 -7px 14px rgba(255, 255, 255, .10);
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 620;
+    }
+
+    .doc-title {
+      flex: 1;
+      min-width: 180px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 8px;
+    }
+
+    .title-input {
+      width: min(520px, 100%);
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 720;
+      padding: 9px 11px;
+      outline: 0;
+    }
+
+    .title-input:focus {
+      border-color: var(--line-strong);
+      background: #fff;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn,
+    .icon-btn,
+    .seg-btn {
+      height: 36px;
+      border-radius: var(--radius);
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+      white-space: nowrap;
+    }
+
+    .btn {
+      padding: 0 12px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .btn.primary {
+      color: #fff;
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .btn.ghost {
+      background: transparent;
+    }
+
+    .btn.warn {
+      color: #fff;
+      border-color: var(--accent-2);
+      background: var(--accent-2);
+    }
+
+    .icon-btn,
+    .seg-btn {
+      width: 36px;
+      padding: 0;
+      font-weight: 760;
+    }
+
+    .btn:hover,
+    .icon-btn:hover,
+    .seg-btn:hover {
+      border-color: var(--line-strong);
+      transform: translateY(-1px);
+    }
+
+    .btn.primary:hover {
+      border-color: #24694f;
+      background: #24694f;
+    }
+
+    .icon {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex: none;
+    }
+
+    .sidebar,
+    .inspector {
+      min-height: 0;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .68);
+      backdrop-filter: blur(12px);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+    }
+
+    .inspector {
+      border-left: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .panel-header {
+      padding: 18px 18px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 820;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .vault-box {
+      margin: 0 14px 14px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 10px 24px rgba(32, 37, 31, .06);
+    }
+
+    .vault-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .vault-name {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 760;
+    }
+
+    .vault-name span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #c5cec3;
+      box-shadow: 0 0 0 4px rgba(197, 206, 195, .25);
+      flex: none;
+    }
+
+    .status-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(45, 122, 95, .16);
+    }
+
+    .path-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .mini-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .path-input {
+      width: 100%;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      color: var(--text);
+      padding: 0 10px;
+      outline: 0;
+      font-size: 13px;
+    }
+
+    .path-input:focus {
+      border-color: var(--accent);
+      background: #fff;
+    }
+
+    .nav-list,
+    .note-list {
+      display: grid;
+      gap: 6px;
+      padding: 0 10px;
+      margin: 0;
+      list-style: none;
+    }
+
+    .nav-item,
+    .note-item {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 18px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      color: var(--text);
+      text-align: left;
+      background: transparent;
+    }
+
+    .nav-item.active,
+    .note-item.active {
+      background: var(--mark);
+      color: #1d5945;
+      font-weight: 760;
+    }
+
+    .note-item {
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+
+    .note-main {
+      min-width: 0;
+    }
+
+    .note-main strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .note-main span {
+      display: block;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #edf1eb;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 720;
+    }
+
+    .sidebar-scroll,
+    .inspector-scroll {
+      min-height: 0;
+      overflow: auto;
+      padding-bottom: 18px;
+    }
+
+    .workspace {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      background: rgba(248, 250, 247, .78);
+    }
+
+    .editor-toolbar {
+      min-height: 54px;
+      padding: 9px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(248, 250, 247, .86);
+      backdrop-filter: blur(12px);
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .segmented {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px;
+      border-radius: var(--radius);
+      background: #e9eee7;
+      border: 1px solid var(--line);
+    }
+
+    .segmented .seg-btn {
+      border: 0;
+      background: transparent;
+      height: 30px;
+      width: auto;
+      min-width: 58px;
+      padding: 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+      transform: none;
+    }
+
+    .segmented .seg-btn.active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(32, 37, 31, .08);
+    }
+
+    .format-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 820;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .format-btn:hover {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--text);
+    }
+
+    .editor-shell {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(330px, 43%);
+      gap: 1px;
+      background: var(--line);
+    }
+
+    .editor-shell.preview-hidden {
+      grid-template-columns: minmax(0, 1fr) 0;
+    }
+
+    .editor-shell.preview-hidden .preview-pane {
+      display: none;
+    }
+
+    .writing-pane,
+    .preview-pane {
+      min-width: 0;
+      min-height: 0;
+      background: #fff;
+      overflow: auto;
+    }
+
+    .writing-wrap {
+      max-width: 840px;
+      min-height: 100%;
+      margin: 0 auto;
+      padding: 58px 72px 90px;
+    }
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .md-editor {
+      width: 100%;
+      min-height: calc(100vh - var(--topbar) - 190px);
+      resize: none;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      background: transparent;
+      font-family: ui-serif, "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif CJK SC", serif;
+      font-size: 19px;
+      line-height: 1.85;
+      letter-spacing: 0;
+      overflow: hidden;
+    }
+
+    .md-editor::selection {
+      background: #cfe6da;
+    }
+
+    .preview-wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 52px 54px 90px;
+      font-family: ui-serif, "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif CJK SC", serif;
+      color: #232a22;
+    }
+
+    .preview-wrap h1,
+    .preview-wrap h2,
+    .preview-wrap h3 {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      line-height: 1.28;
+    }
+
+    .preview-wrap h1 {
+      margin: 0 0 22px;
+      font-size: 32px;
+    }
+
+    .preview-wrap h2 {
+      margin: 34px 0 12px;
+      font-size: 23px;
+    }
+
+    .preview-wrap h3 {
+      margin: 28px 0 10px;
+      font-size: 18px;
+    }
+
+    .preview-wrap p,
+    .preview-wrap li,
+    .preview-wrap blockquote {
+      font-size: 17px;
+      line-height: 1.85;
+    }
+
+    .preview-wrap blockquote {
+      margin: 22px 0;
+      padding: 10px 18px;
+      border-left: 4px solid var(--accent);
+      background: #f3f8f5;
+      color: #405044;
+    }
+
+    .preview-wrap code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #eef1ec;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .9em;
+    }
+
+    .preview-wrap pre {
+      overflow: auto;
+      padding: 16px;
+      border-radius: var(--radius);
+      background: #20251f;
+      color: #f7faf5;
+    }
+
+    .preview-wrap pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+
+    .preview-wrap a {
+      color: var(--accent-3);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .bottom-status {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 20px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, .78);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      white-space: nowrap;
+    }
+
+    .save-state {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .inspector-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 18px 16px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .inspector-section {
+      padding: 12px 12px 18px;
+    }
+
+    .outline-list {
+      display: grid;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .outline-list button {
+      width: 100%;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      line-height: 1.35;
+    }
+
+    .outline-list button:hover {
+      background: #eef3ec;
+    }
+
+    .outline-list .level-2 {
+      padding-left: 20px;
+    }
+
+    .outline-list .level-3 {
+      padding-left: 34px;
+      color: var(--muted);
+    }
+
+    .switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex: none;
+    }
+
+    .switch input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
+
+    .switch span {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: #c9d2c6;
+      transition: background .18s ease;
+    }
+
+    .switch span::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 7px rgba(32, 37, 31, .22);
+      transition: transform .18s ease;
+    }
+
+    .switch input:checked + span {
+      background: var(--accent);
+    }
+
+    .switch input:checked + span::after {
+      transform: translateX(18px);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 50;
+      transform: translate(-50%, 12px);
+      opacity: 0;
+      pointer-events: none;
+      max-width: min(520px, calc(100vw - 32px));
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(32, 37, 31, .94);
+      color: #fff;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      transition: opacity .18s ease, transform .18s ease;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .slash-menu {
+      position: fixed;
+      z-index: 60;
+      width: 260px;
+      max-width: calc(100vw - 24px);
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .96);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      opacity: 0;
+      transform: translateY(6px);
+      pointer-events: none;
+      transition: opacity .12s ease, transform .12s ease;
+    }
+
+    .slash-menu.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .slash-option {
+      width: 100%;
+      min-height: 44px;
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 7px 8px;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .slash-option.active,
+    .slash-option:hover {
+      background: var(--mark);
+    }
+
+    .slash-icon {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 820;
+    }
+
+    .slash-copy {
+      min-width: 0;
+    }
+
+    .slash-copy strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 780;
+      line-height: 1.25;
+    }
+
+    .slash-copy span {
+      display: block;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    body.focus-mode {
+      --sidebar: 0px;
+      --inspector: 0px;
+    }
+
+    body.focus-mode .sidebar,
+    body.focus-mode .inspector {
+      display: none;
+    }
+
+    body.focus-mode .writing-wrap {
+      max-width: 780px;
+    }
+
+    @media (max-width: 1180px) {
+      :root {
+        --sidebar: 240px;
+        --inspector: 250px;
+      }
+
+      .editor-shell {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .preview-pane {
+        display: none;
+      }
+
+      .segmented {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        min-height: 100vh;
+        height: auto;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        flex-wrap: wrap;
+        height: auto;
+        padding: 10px 12px;
+      }
+
+      .brand {
+        width: 100%;
+      }
+
+      .doc-title {
+        order: 2;
+        width: 100%;
+        padding-left: 0;
+      }
+
+      .top-actions {
+        margin-left: auto;
+      }
+
+      .sidebar,
+      .inspector {
+        border: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .sidebar {
+        grid-row: 2;
+      }
+
+      .workspace {
+        grid-row: 3;
+      }
+
+      .inspector {
+        grid-row: 4;
+      }
+
+      .editor-toolbar {
+        position: sticky;
+        top: 105px;
+        z-index: 10;
+        overflow-x: auto;
+      }
+
+      .writing-wrap {
+        padding: 34px 22px 56px;
+      }
+
+      .md-editor {
+        font-size: 18px;
+        min-height: 70vh;
+      }
+
+      .bottom-status {
+        position: sticky;
+        bottom: 0;
+      }
+
+      body.focus-mode .sidebar,
+      body.focus-mode .inspector {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M7 8h10"/><path d="M8 16h8"/></svg>
+        </div>
+        <div>
+          Margin
+          <small>Markdown to Obsidian</small>
+        </div>
+      </div>
+
+      <div class="doc-title">
+        <input id="titleInput" class="title-input" value="关于长期写作系统的笔记" aria-label="文档标题">
+      </div>
+
+      <div class="top-actions">
+        <button id="newDocBtn" class="icon-btn" type="button" title="新建" aria-label="新建">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        </button>
+        <button id="chooseVaultBtn" class="btn primary" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h6l2 3h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 7V5a2 2 0 0 1 2-2h4l2 4"/></svg>
+          选择 Vault
+        </button>
+        <button id="exportBtn" class="btn ghost" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          导出
+        </button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="panel-header">
+        <h2 class="panel-title">Vault</h2>
+        <span id="vaultDot" class="status-dot" aria-hidden="true"></span>
+      </div>
+
+      <section class="vault-box">
+        <div class="vault-line">
+          <div class="vault-name">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M6 20V8l6-4 6 4v12"/><path d="M10 20v-6h4v6"/></svg>
+            <span id="vaultName">未连接</span>
+          </div>
+          <span class="tag">MD</span>
+        </div>
+        <div class="path-row">
+          <input id="pathInput" class="path-input" value="Writing/Inbox" aria-label="沉淀目录">
+          <button id="saveNowBtn" class="icon-btn" type="button" title="立即保存" aria-label="立即保存">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+          </button>
+        </div>
+        <label class="mini-toggle">
+          <span>自动沉淀</span>
+          <span class="switch">
+            <input id="autoSaveToggle" type="checkbox" checked>
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+      </section>
+
+      <div class="sidebar-scroll">
+        <div class="panel-header">
+          <h2 class="panel-title">Spaces</h2>
+        </div>
+        <ul class="nav-list">
+          <li><button class="nav-item active" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg><span>正在写</span><span class="tag">3</span></button></li>
+          <li><button class="nav-item" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>草稿箱</span><span class="tag">8</span></button></li>
+          <li><button class="nav-item" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="M9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>已沉淀</span><span class="tag">21</span></button></li>
+        </ul>
+
+        <div class="panel-header">
+          <h2 class="panel-title">Recent</h2>
+        </div>
+        <ul class="note-list" id="noteList">
+          <li><button class="note-item active" type="button"><span class="note-main"><strong>关于长期写作系统的笔记</strong><span>Writing/Inbox</span></span><span class="tag">现在</span></button></li>
+          <li><button class="note-item" type="button"><span class="note-main"><strong>产品思考：AI 时代的个人知识库</strong><span>Essays/Product</span></span><span class="tag">昨日</span></button></li>
+          <li><button class="note-item" type="button"><span class="note-main"><strong>从碎片到文章的整理流程</strong><span>Writing/System</span></span><span class="tag">周一</span></button></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="editor-toolbar">
+        <div class="toolbar-group" role="toolbar" aria-label="Markdown 格式">
+          <button class="format-btn" data-wrap="**" type="button" title="加粗" aria-label="加粗">B</button>
+          <button class="format-btn" data-wrap="*" type="button" title="斜体" aria-label="斜体"><em>I</em></button>
+          <button class="format-btn" data-prefix="# " type="button" title="标题" aria-label="标题">H</button>
+          <button class="format-btn" data-prefix="- " type="button" title="列表" aria-label="列表">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          </button>
+          <button class="format-btn" data-prefix="> " type="button" title="引用" aria-label="引用">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.76-2-2-2H4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2Z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.76-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h.75c0 2.25-.75 3.75-1.75 4Z"/></svg>
+          </button>
+          <button class="format-btn" data-wrap="`" type="button" title="代码" aria-label="代码">
+            <svg class="icon" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
+          </button>
+        </div>
+
+        <div class="toolbar-group">
+          <div class="segmented" aria-label="视图">
+            <button id="editModeBtn" class="seg-btn active" type="button">编辑</button>
+            <button id="splitModeBtn" class="seg-btn" type="button">分屏</button>
+          </div>
+          <button id="focusBtn" class="icon-btn" type="button" title="专注" aria-label="专注">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <section id="editorShell" class="editor-shell">
+        <div class="writing-pane">
+          <div class="writing-wrap">
+            <div class="meta-row">
+              <span class="tag">#writing</span>
+              <span class="tag">#obsidian</span>
+              <span id="fileNameTag" class="tag">about-long-term-writing-system.md</span>
+            </div>
+            <textarea id="editor" class="md-editor" spellcheck="true" aria-label="Markdown 编辑器"># 关于长期写作系统的笔记
+
+写作软件的核心不是把编辑器做得更复杂，而是让一篇文章从草稿、修订、归档到复用的路径变短。
+
+## 输入层
+
+一个好的输入层应该尽量少打断作者。标题、标签、归档目录和正文可以在同一个界面完成，保存动作应该退到后台。
+
+## 沉淀层
+
+写完之后，内容需要进入 Obsidian vault 的指定目录。文件格式保持为标准 Markdown，文件名从标题自动生成，必要时追加日期避免冲突。
+
+> 真正重要的是让写作产物马上回到个人知识库，而不是停在另一个孤岛里。
+
+## 写作体验
+
+- 左侧管理 vault、目录和近期文档
+- 中间保留足够宽的编辑区域
+- 右侧提供大纲、预览和保存状态
+
+## 下一步
+
+把本地目录权限、自动保存队列、Frontmatter 模板和 Obsidian 链接语法补齐。</textarea>
+          </div>
+        </div>
+
+        <article class="preview-pane" aria-label="Markdown 预览">
+          <div id="preview" class="preview-wrap"></div>
+        </article>
+      </section>
+
+      <footer class="bottom-status">
+        <div class="stats">
+          <span id="wordCount">0 字</span>
+          <span id="readingTime">0 分钟</span>
+          <span id="headingCount">0 标题</span>
+        </div>
+        <div id="saveState" class="save-state">本地草稿已就绪</div>
+      </footer>
+    </main>
+
+    <aside class="inspector">
+      <div class="inspector-heading">
+        <h2 class="panel-title">目录</h2>
+        <span id="headingCountBadge" class="tag">0</span>
+      </div>
+
+      <div class="inspector-scroll">
+        <section class="inspector-section">
+          <ul id="outline" class="outline-list"></ul>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="slashMenu" class="slash-menu" role="listbox" aria-label="快速写作"></div>
+
+  <script>
+    const editor = document.querySelector('#editor');
+    const preview = document.querySelector('#preview');
+    const titleInput = document.querySelector('#titleInput');
+    const pathInput = document.querySelector('#pathInput');
+    const chooseVaultBtn = document.querySelector('#chooseVaultBtn');
+    const exportBtn = document.querySelector('#exportBtn');
+    const saveNowBtn = document.querySelector('#saveNowBtn');
+    const newDocBtn = document.querySelector('#newDocBtn');
+    const focusBtn = document.querySelector('#focusBtn');
+    const editModeBtn = document.querySelector('#editModeBtn');
+    const splitModeBtn = document.querySelector('#splitModeBtn');
+    const editorShell = document.querySelector('#editorShell');
+    const autoSaveToggle = document.querySelector('#autoSaveToggle');
+    const vaultName = document.querySelector('#vaultName');
+    const vaultDot = document.querySelector('#vaultDot');
+    const saveState = document.querySelector('#saveState');
+    const toast = document.querySelector('#toast');
+    const outline = document.querySelector('#outline');
+    const wordCount = document.querySelector('#wordCount');
+    const readingTime = document.querySelector('#readingTime');
+    const headingCount = document.querySelector('#headingCount');
+    const headingCountBadge = document.querySelector('#headingCountBadge');
+    const fileNameTag = document.querySelector('#fileNameTag');
+    const slashMenu = document.querySelector('#slashMenu');
+
+    let directoryHandle = null;
+    let saveTimer = null;
+    let toastTimer = null;
+    let slashState = {
+      open: false,
+      query: '',
+      rangeStart: 0,
+      activeIndex: 0,
+      items: [],
+    };
+    const storageKey = 'margin-writer-state';
+    const slashCommands = [
+      { id: 'h1', icon: 'H1', title: '大标题', hint: '# 一级标题', keywords: 'h1 title biaoti 大标题 一级标题', text: '# ', caretOffset: 2 },
+      { id: 'h2', icon: 'H2', title: '小标题', hint: '## 二级标题', keywords: 'h2 subtitle xiaobiaoti 小标题 二级标题', text: '## ', caretOffset: 3 },
+      { id: 'h3', icon: 'H3', title: '三级标题', hint: '### 三级标题', keywords: 'h3 heading 三级标题', text: '### ', caretOffset: 4 },
+      { id: 'quote', icon: '>', title: '引用', hint: '> 引用一段内容', keywords: 'quote yin yinyong 引用', text: '> ', caretOffset: 2 },
+      { id: 'list', icon: '-', title: '无序列表', hint: '- 列表项', keywords: 'list bullet liebiao 列表 无序', text: '- ', caretOffset: 2 },
+      { id: 'todo', icon: '[ ]', title: '待办', hint: '- [ ] 待办事项', keywords: 'todo task daiban 待办 任务', text: '- [ ] ', caretOffset: 6 },
+      { id: 'code', icon: '{}', title: '代码块', hint: '``` 多行代码 ```', keywords: 'code daima 代码', text: '```\n\n```', caretOffset: 4 },
+      { id: 'callout', icon: '!', title: 'Obsidian Callout', hint: '> [!note] 提示块', keywords: 'callout note obsidian tip tishi 提示', text: '> [!note] ', caretOffset: 10 },
+      { id: 'divider', icon: 'HR', title: '分割线', hint: '---', keywords: 'divider hr fenge 分割线', text: '---\n', caretOffset: 4 },
+    ];
+
+    const escapeHtml = (value) => value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    const slugify = (value) => {
+      const normalized = value.trim().toLowerCase()
+        .replace(/[\\/:*?"<>|#\[\]`]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      return normalized || `untitled-${new Date().toISOString().slice(0, 10)}`;
+    };
+
+    const currentFileName = () => `${slugify(titleInput.value)}.md`;
+
+    const buildMarkdown = () => {
+      const body = editor.value.trimStart();
+      const title = titleInput.value.trim() || 'Untitled';
+      if (body.startsWith('# ')) return body;
+      return `# ${title}\n\n${body}`;
+    };
+
+    const showToast = (message) => {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+    };
+
+    const setSaveState = (message) => {
+      saveState.textContent = message;
+    };
+
+    const saveDraftToLocalStorage = () => {
+      localStorage.setItem(storageKey, JSON.stringify({
+        title: titleInput.value,
+        path: pathInput.value,
+        content: editor.value,
+        autoSave: autoSaveToggle.checked,
+        updatedAt: new Date().toISOString(),
+      }));
+    };
+
+    const loadDraftFromLocalStorage = () => {
+      const saved = localStorage.getItem(storageKey);
+      if (!saved) return;
+      try {
+        const data = JSON.parse(saved);
+        titleInput.value = data.title || titleInput.value;
+        pathInput.value = data.path || pathInput.value;
+        editor.value = data.content || editor.value;
+        autoSaveToggle.checked = data.autoSave !== false;
+      } catch (error) {
+        console.warn(error);
+      }
+    };
+
+    const inlineMarkdown = (line) => escapeHtml(line)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+    const markdownToHtml = (markdown) => {
+      const lines = markdown.split('\n');
+      let html = '';
+      let inList = false;
+      let inCode = false;
+      let code = [];
+
+      const closeList = () => {
+        if (inList) {
+          html += '</ul>';
+          inList = false;
+        }
+      };
+
+      lines.forEach((line) => {
+        if (line.trim().startsWith('```')) {
+          if (inCode) {
+            html += `<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`;
+            code = [];
+            inCode = false;
+          } else {
+            closeList();
+            inCode = true;
+          }
+          return;
+        }
+
+        if (inCode) {
+          code.push(line);
+          return;
+        }
+
+        if (/^###\s+/.test(line)) {
+          closeList();
+          html += `<h3>${inlineMarkdown(line.replace(/^###\s+/, ''))}</h3>`;
+          return;
+        }
+
+        if (/^##\s+/.test(line)) {
+          closeList();
+          html += `<h2>${inlineMarkdown(line.replace(/^##\s+/, ''))}</h2>`;
+          return;
+        }
+
+        if (/^#\s+/.test(line)) {
+          closeList();
+          html += `<h1>${inlineMarkdown(line.replace(/^#\s+/, ''))}</h1>`;
+          return;
+        }
+
+        if (/^>\s?/.test(line)) {
+          closeList();
+          html += `<blockquote>${inlineMarkdown(line.replace(/^>\s?/, ''))}</blockquote>`;
+          return;
+        }
+
+        if (/^-\s+/.test(line)) {
+          if (!inList) {
+            html += '<ul>';
+            inList = true;
+          }
+          html += `<li>${inlineMarkdown(line.replace(/^-\s+/, ''))}</li>`;
+          return;
+        }
+
+        if (!line.trim()) {
+          closeList();
+          return;
+        }
+
+        closeList();
+        html += `<p>${inlineMarkdown(line)}</p>`;
+      });
+
+      closeList();
+      if (inCode) html += `<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`;
+      return html;
+    };
+
+    const extractHeadings = () => editor.value
+      .split('\n')
+      .map((line, index) => ({ line, index }))
+      .filter(({ line }) => /^#{1,3}\s+/.test(line))
+      .map(({ line, index }) => {
+        const level = line.match(/^#+/)[0].length;
+        return {
+          level,
+          text: line.replace(/^#{1,3}\s+/, '').trim(),
+          index,
+        };
+      });
+
+    const updateOutline = (headings) => {
+      outline.innerHTML = '';
+      if (!headings.length) {
+        const item = document.createElement('li');
+        item.innerHTML = '<button type="button">Untitled</button>';
+        outline.appendChild(item);
+        return;
+      }
+
+      headings.forEach((heading) => {
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `level-${Math.min(heading.level, 3)}`;
+        button.textContent = heading.text;
+        button.addEventListener('click', () => {
+          const position = editor.value.split('\n').slice(0, heading.index).join('\n').length;
+          editor.focus();
+          editor.setSelectionRange(position, position);
+        });
+        item.appendChild(button);
+        outline.appendChild(item);
+      });
+    };
+
+    const resizeEditor = () => {
+      editor.style.height = 'auto';
+      editor.style.height = `${Math.max(editor.scrollHeight, 520)}px`;
+    };
+
+    const updateStats = () => {
+      const text = editor.value.trim();
+      const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+      const latinWords = (text.replace(/[\u4e00-\u9fa5]/g, ' ').match(/[A-Za-z0-9_]+/g) || []).length;
+      const total = chineseChars + latinWords;
+      const headings = extractHeadings();
+      wordCount.textContent = `${total} 字`;
+      readingTime.textContent = `${Math.max(1, Math.ceil(total / 450))} 分钟`;
+      headingCount.textContent = `${headings.length} 标题`;
+      headingCountBadge.textContent = `${headings.length}`;
+      updateOutline(headings);
+    };
+
+    const updateFileMeta = () => {
+      const file = currentFileName();
+      fileNameTag.textContent = file;
+    };
+
+    const render = () => {
+      preview.innerHTML = markdownToHtml(buildMarkdown());
+      updateStats();
+      updateFileMeta();
+      resizeEditor();
+    };
+
+    const getTargetDirectory = async () => {
+      if (!directoryHandle) return null;
+      const parts = pathInput.value.split('/').map((part) => part.trim()).filter(Boolean);
+      let current = directoryHandle;
+      for (const part of parts) {
+        current = await current.getDirectoryHandle(part, { create: true });
+      }
+      return current;
+    };
+
+    const writeToVault = async () => {
+      if (!directoryHandle) {
+        saveDraftToLocalStorage();
+        setSaveState('草稿已保存到浏览器');
+        return false;
+      }
+
+      const targetDir = await getTargetDirectory();
+      const fileHandle = await targetDir.getFileHandle(currentFileName(), { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(buildMarkdown());
+      await writable.close();
+      setSaveState(`已沉淀到 ${pathInput.value}/${currentFileName()}`);
+      return true;
+    };
+
+    const scheduleSave = () => {
+      saveDraftToLocalStorage();
+      setSaveState('正在写作');
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        if (!autoSaveToggle.checked) {
+          setSaveState('自动沉淀已关闭');
+          return;
+        }
+        try {
+          await writeToVault();
+        } catch (error) {
+          console.warn(error);
+          setSaveState('沉淀失败，草稿保留在浏览器');
+        }
+      }, 900);
+    };
+
+    const chooseVault = async () => {
+      if (!window.showDirectoryPicker) {
+        showToast('当前浏览器不支持直接写入目录，可先导出 Markdown');
+        return;
+      }
+
+      try {
+        directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        vaultName.textContent = directoryHandle.name;
+        vaultDot.classList.add('active');
+        await writeToVault();
+        showToast(`已连接 ${directoryHandle.name}`);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.warn(error);
+          showToast('目录授权未完成');
+        }
+      }
+    };
+
+    const exportMarkdown = () => {
+      const blob = new Blob([buildMarkdown()], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = currentFileName();
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast(`已导出 ${currentFileName()}`);
+    };
+
+    const getSlashTrigger = () => {
+      const cursor = editor.selectionStart;
+      if (cursor !== editor.selectionEnd) return null;
+      const lineStart = editor.value.lastIndexOf('\n', cursor - 1) + 1;
+      const currentLine = editor.value.slice(lineStart, cursor);
+      const slashIndex = currentLine.lastIndexOf('/');
+      if (slashIndex < 0) return null;
+      const beforeSlash = currentLine.slice(0, slashIndex);
+      const query = currentLine.slice(slashIndex + 1);
+      if (query.includes(' ') || query.includes('\t')) return null;
+      if (beforeSlash.trim() && !/\s$/.test(beforeSlash)) return null;
+      return {
+        rangeStart: lineStart + slashIndex,
+        query: query.toLowerCase(),
+      };
+    };
+
+    const filteredSlashCommands = (query) => {
+      if (!query) return slashCommands;
+      return slashCommands.filter((command) => {
+        const haystack = `${command.id} ${command.title} ${command.hint} ${command.keywords}`.toLowerCase();
+        return haystack.includes(query);
+      });
+    };
+
+    const getCaretPosition = () => {
+      const style = window.getComputedStyle(editor);
+      const mirror = document.createElement('div');
+      const properties = [
+        'boxSizing', 'width', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
+        'letterSpacing', 'lineHeight', 'paddingTop', 'paddingRight', 'paddingBottom',
+        'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth',
+        'borderLeftWidth', 'textTransform', 'textAlign', 'wordSpacing',
+      ];
+
+      properties.forEach((property) => {
+        mirror.style[property] = style[property];
+      });
+
+      mirror.style.position = 'fixed';
+      mirror.style.left = '-9999px';
+      mirror.style.top = '0';
+      mirror.style.whiteSpace = 'pre-wrap';
+      mirror.style.overflowWrap = 'break-word';
+      mirror.style.visibility = 'hidden';
+      mirror.textContent = editor.value.slice(0, editor.selectionStart);
+
+      const marker = document.createElement('span');
+      marker.textContent = '\u200b';
+      mirror.appendChild(marker);
+      document.body.appendChild(mirror);
+
+      const markerRect = marker.getBoundingClientRect();
+      const mirrorRect = mirror.getBoundingClientRect();
+      const editorRect = editor.getBoundingClientRect();
+      const position = {
+        left: editorRect.left + markerRect.left - mirrorRect.left - editor.scrollLeft,
+        top: editorRect.top + markerRect.top - mirrorRect.top - editor.scrollTop,
+        lineHeight: parseFloat(style.lineHeight) || 28,
+      };
+
+      mirror.remove();
+      return position;
+    };
+
+    const positionSlashMenu = () => {
+      const caret = getCaretPosition();
+      const menuWidth = slashMenu.offsetWidth || 260;
+      const menuHeight = slashMenu.offsetHeight || 260;
+      let left = caret.left;
+      let top = caret.top + caret.lineHeight + 8;
+
+      if (left + menuWidth > window.innerWidth - 12) {
+        left = window.innerWidth - menuWidth - 12;
+      }
+      if (top + menuHeight > window.innerHeight - 12) {
+        top = caret.top - menuHeight - 8;
+      }
+
+      slashMenu.style.left = `${Math.max(12, left)}px`;
+      slashMenu.style.top = `${Math.max(12, top)}px`;
+    };
+
+    const closeSlashMenu = () => {
+      slashState.open = false;
+      slashState.query = '';
+      slashState.items = [];
+      slashState.activeIndex = 0;
+      slashMenu.classList.remove('show');
+      slashMenu.innerHTML = '';
+    };
+
+    const commitSlashCommand = (command) => {
+      const cursor = editor.selectionStart;
+      editor.setRangeText(command.text, slashState.rangeStart, cursor, 'end');
+      const nextCursor = slashState.rangeStart + command.caretOffset;
+      editor.setSelectionRange(nextCursor, nextCursor);
+      closeSlashMenu();
+      editor.focus();
+      render();
+      scheduleSave();
+    };
+
+    const renderSlashMenu = () => {
+      slashMenu.innerHTML = '';
+      slashState.items.forEach((command, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `slash-option${index === slashState.activeIndex ? ' active' : ''}`;
+        button.setAttribute('role', 'option');
+        button.setAttribute('aria-selected', index === slashState.activeIndex ? 'true' : 'false');
+        button.innerHTML = `
+          <span class="slash-icon">${escapeHtml(command.icon)}</span>
+          <span class="slash-copy">
+            <strong>${escapeHtml(command.title)}</strong>
+            <span>${escapeHtml(command.hint)}</span>
+          </span>
+        `;
+        button.addEventListener('mouseenter', () => {
+          slashState.activeIndex = index;
+          renderSlashMenu();
+        });
+        button.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          commitSlashCommand(command);
+        });
+        slashMenu.appendChild(button);
+      });
+      positionSlashMenu();
+    };
+
+    const updateSlashMenu = () => {
+      const trigger = getSlashTrigger();
+      if (!trigger) {
+        closeSlashMenu();
+        return;
+      }
+
+      const items = filteredSlashCommands(trigger.query);
+      if (!items.length) {
+        closeSlashMenu();
+        return;
+      }
+
+      slashState = {
+        open: true,
+        query: trigger.query,
+        rangeStart: trigger.rangeStart,
+        activeIndex: Math.min(slashState.activeIndex, items.length - 1),
+        items,
+      };
+      renderSlashMenu();
+      slashMenu.classList.add('show');
+    };
+
+    const moveSlashSelection = (direction) => {
+      if (!slashState.open || !slashState.items.length) return;
+      const next = slashState.activeIndex + direction;
+      slashState.activeIndex = (next + slashState.items.length) % slashState.items.length;
+      renderSlashMenu();
+    };
+
+    const insertMarkdown = (button) => {
+      const wrap = button.dataset.wrap;
+      const prefix = button.dataset.prefix;
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const selected = editor.value.slice(start, end);
+
+      if (wrap) {
+        const text = `${wrap}${selected || 'text'}${wrap}`;
+        editor.setRangeText(text, start, end, 'select');
+      }
+
+      if (prefix) {
+        const lineStart = editor.value.lastIndexOf('\n', start - 1) + 1;
+        editor.setRangeText(prefix, lineStart, lineStart, 'end');
+      }
+
+      editor.focus();
+      render();
+      scheduleSave();
+    };
+
+    const createNewDoc = () => {
+      const date = new Date().toISOString().slice(0, 10);
+      titleInput.value = `未命名笔记 ${date}`;
+      editor.value = `# ${titleInput.value}\n\n`;
+      render();
+      scheduleSave();
+      editor.focus();
+    };
+
+    document.querySelectorAll('.format-btn').forEach((button) => {
+      button.addEventListener('click', () => insertMarkdown(button));
+    });
+
+    editor.addEventListener('input', () => {
+      render();
+      scheduleSave();
+      updateSlashMenu();
+    });
+
+    editor.addEventListener('keydown', (event) => {
+      if (!slashState.open) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        moveSlashSelection(1);
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        moveSlashSelection(-1);
+      }
+
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        commitSlashCommand(slashState.items[slashState.activeIndex]);
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeSlashMenu();
+      }
+    });
+
+    titleInput.addEventListener('input', () => {
+      render();
+      scheduleSave();
+    });
+
+    pathInput.addEventListener('input', () => {
+      render();
+      scheduleSave();
+    });
+
+    chooseVaultBtn.addEventListener('click', chooseVault);
+    exportBtn.addEventListener('click', exportMarkdown);
+    saveNowBtn.addEventListener('click', async () => {
+      try {
+        const wrote = await writeToVault();
+        showToast(wrote ? '已保存到 Vault' : '草稿已保存');
+      } catch (error) {
+        console.warn(error);
+        showToast('保存失败');
+      }
+    });
+
+    newDocBtn.addEventListener('click', createNewDoc);
+
+    focusBtn.addEventListener('click', () => {
+      document.body.classList.toggle('focus-mode');
+      focusBtn.classList.toggle('active');
+      resizeEditor();
+    });
+
+    editModeBtn.addEventListener('click', () => {
+      editorShell.classList.add('preview-hidden');
+      editModeBtn.classList.add('active');
+      splitModeBtn.classList.remove('active');
+    });
+
+    splitModeBtn.addEventListener('click', () => {
+      editorShell.classList.remove('preview-hidden');
+      splitModeBtn.classList.add('active');
+      editModeBtn.classList.remove('active');
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const command = event.metaKey || event.ctrlKey;
+      if (command && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        writeToVault().then((wrote) => showToast(wrote ? '已保存到 Vault' : '草稿已保存'));
+      }
+      if (command && event.key.toLowerCase() === 'b') {
+        event.preventDefault();
+        insertMarkdown(document.querySelector('[data-wrap="**"]'));
+      }
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target === editor || slashMenu.contains(event.target)) return;
+      closeSlashMenu();
+    });
+
+    document.addEventListener('selectionchange', () => {
+      if (document.activeElement === editor) updateSlashMenu();
+    });
+
+    window.addEventListener('resize', () => {
+      if (slashState.open) positionSlashMenu();
+    });
+
+    loadDraftFromLocalStorage();
+    render();
+    scheduleSave();
+  </script>
+</body>
+</html>
