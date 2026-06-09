@@ -1149,6 +1149,7 @@
     const slashMenu = document.querySelector('#slashMenu');
 
     let directoryHandle = null;
+    let desktopVaultPath = '';
     let saveTimer = null;
     let toastTimer = null;
     let slashState = {
@@ -1159,6 +1160,7 @@
       items: [],
     };
     const storageKey = 'margin-writer-state';
+    const isDesktop = Boolean(window.marginApp);
     const slashCommands = [
       { id: 'h1', icon: 'H1', title: '大标题', hint: '# 一级标题', keywords: 'h1 title biaoti 大标题 一级标题', text: '# ', caretOffset: 2 },
       { id: 'h2', icon: 'H2', title: '小标题', hint: '## 二级标题', keywords: 'h2 subtitle xiaobiaoti 小标题 二级标题', text: '## ', caretOffset: 3 },
@@ -1213,6 +1215,8 @@
         path: pathInput.value,
         content: editor.value,
         autoSave: autoSaveToggle.checked,
+        vaultPath: desktopVaultPath,
+        vaultName: vaultName.textContent,
         updatedAt: new Date().toISOString(),
       }));
     };
@@ -1226,6 +1230,11 @@
         pathInput.value = data.path || pathInput.value;
         editor.value = data.content || editor.value;
         autoSaveToggle.checked = data.autoSave !== false;
+        if (isDesktop && data.vaultPath) {
+          desktopVaultPath = data.vaultPath;
+          vaultName.textContent = data.vaultName || data.vaultPath.split('/').pop() || 'Vault';
+          vaultDot.classList.add('active');
+        }
       } catch (error) {
         console.warn(error);
       }
@@ -1395,6 +1404,25 @@
     };
 
     const writeToVault = async () => {
+      if (isDesktop) {
+        if (!desktopVaultPath) {
+          saveDraftToLocalStorage();
+          setSaveState('草稿已保存，尚未选择 Vault');
+          return false;
+        }
+
+        const result = await window.marginApp.saveMarkdown({
+          vaultPath: desktopVaultPath,
+          targetPath: pathInput.value,
+          fileName: currentFileName(),
+          content: buildMarkdown(),
+        });
+
+        saveDraftToLocalStorage();
+        setSaveState(`已沉淀到 ${result.filePath}`);
+        return true;
+      }
+
       if (!directoryHandle) {
         saveDraftToLocalStorage();
         setSaveState('草稿已保存到浏览器');
@@ -1429,6 +1457,24 @@
     };
 
     const chooseVault = async () => {
+      if (isDesktop) {
+        try {
+          const result = await window.marginApp.chooseVault();
+          if (result.canceled) return;
+
+          desktopVaultPath = result.path;
+          vaultName.textContent = result.name;
+          vaultDot.classList.add('active');
+          saveDraftToLocalStorage();
+          await writeToVault();
+          showToast(`已连接 ${result.name}`);
+        } catch (error) {
+          console.warn(error);
+          showToast('目录授权未完成');
+        }
+        return;
+      }
+
       if (!window.showDirectoryPicker) {
         showToast('当前浏览器不支持直接写入目录，可先导出 Markdown');
         return;
@@ -1448,7 +1494,21 @@
       }
     };
 
-    const exportMarkdown = () => {
+    const exportMarkdown = async () => {
+      if (isDesktop) {
+        try {
+          const result = await window.marginApp.exportMarkdown({
+            fileName: currentFileName(),
+            content: buildMarkdown(),
+          });
+          if (!result.canceled) showToast(`已导出 ${result.filePath}`);
+        } catch (error) {
+          console.warn(error);
+          showToast('导出失败');
+        }
+        return;
+      }
+
       const blob = new Blob([buildMarkdown()], { type: 'text/markdown;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
