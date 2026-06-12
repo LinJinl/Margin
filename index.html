@@ -772,6 +772,117 @@
       transform: translate(-50%, 0);
     }
 
+    .vault-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(243, 245, 242, .82);
+      backdrop-filter: blur(20px);
+    }
+
+    .vault-gate.show {
+      display: flex;
+    }
+
+    .vault-gate-panel {
+      width: min(560px, 100%);
+      max-height: min(680px, calc(100vh - 48px));
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .96);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .vault-gate-header {
+      padding: 22px 22px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .vault-gate-header h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .vault-gate-header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .vault-candidates {
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .vault-choice {
+      width: 100%;
+      min-height: 60px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      text-align: left;
+    }
+
+    .vault-choice:hover {
+      border-color: var(--line-strong);
+      background: var(--surface-2);
+    }
+
+    .vault-choice.empty,
+    .vault-choice.empty:hover {
+      cursor: default;
+      border-color: var(--line);
+      background: var(--surface);
+      transform: none;
+    }
+
+    .vault-choice strong,
+    .vault-choice span {
+      min-width: 0;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .vault-choice strong {
+      font-size: 14px;
+      font-weight: 780;
+    }
+
+    .vault-choice span {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .vault-gate-footer {
+      padding: 14px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+
     .slash-menu {
       position: fixed;
       z-index: 60;
@@ -1081,7 +1192,7 @@
             <button id="editModeBtn" class="seg-btn active" type="button">编辑</button>
             <button id="splitModeBtn" class="seg-btn" type="button">分屏</button>
           </div>
-          <button id="focusBtn" class="icon-btn" type="button" title="专注" aria-label="专注">
+          <button id="focusBtn" class="icon-btn" type="button" title="全屏" aria-label="全屏">
             <svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
           </button>
         </div>
@@ -1151,6 +1262,21 @@
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="vaultGate" class="vault-gate" role="dialog" aria-modal="true" aria-labelledby="vaultGateTitle">
+    <section class="vault-gate-panel">
+      <div class="vault-gate-header">
+        <h2 id="vaultGateTitle">选择 Obsidian Vault</h2>
+        <p>Margin 需要一个 Vault 才能把 Markdown 和图片资源沉淀到本机文件夹。检测到的 Obsidian Vault 会显示在这里，也可以手动选择。</p>
+      </div>
+      <div id="vaultCandidates" class="vault-candidates"></div>
+      <div class="vault-gate-footer">
+        <button id="manualVaultBtn" class="btn primary" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h6l2 3h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 7V5a2 2 0 0 1 2-2h4l2 4"/></svg>
+          手动选择
+        </button>
+      </div>
+    </section>
+  </div>
   <div id="slashMenu" class="slash-menu" role="listbox" aria-label="快速写作"></div>
 
   <script>
@@ -1169,6 +1295,8 @@
     const editModeBtn = document.querySelector('#editModeBtn');
     const splitModeBtn = document.querySelector('#splitModeBtn');
     const editorShell = document.querySelector('#editorShell');
+    const writingPane = document.querySelector('.writing-pane');
+    const previewPane = document.querySelector('.preview-pane');
     const autoSaveToggle = document.querySelector('#autoSaveToggle');
     const vaultName = document.querySelector('#vaultName');
     const vaultDot = document.querySelector('#vaultDot');
@@ -1183,11 +1311,16 @@
     const slashMenu = document.querySelector('#slashMenu');
     const noteList = document.querySelector('#noteList');
     const navButtons = [...document.querySelectorAll('.nav-item')];
+    const vaultGate = document.querySelector('#vaultGate');
+    const vaultCandidates = document.querySelector('#vaultCandidates');
+    const manualVaultBtn = document.querySelector('#manualVaultBtn');
 
     let directoryHandle = null;
     let desktopVaultPath = '';
     let saveTimer = null;
     let toastTimer = null;
+    let obsidianVaults = [];
+    let syncingScroll = false;
     let slashState = {
       open: false,
       query: '',
@@ -1327,6 +1460,112 @@
 
     const setSaveState = (message) => {
       saveState.textContent = message;
+    };
+
+    const scrollRatio = (element) => {
+      const maxScroll = element.scrollHeight - element.clientHeight;
+      if (maxScroll <= 0) return 0;
+      return element.scrollTop / maxScroll;
+    };
+
+    const applyScrollRatio = (element, ratio) => {
+      const maxScroll = element.scrollHeight - element.clientHeight;
+      element.scrollTop = Math.max(0, maxScroll * ratio);
+    };
+
+    const syncPreviewScroll = (source, target) => {
+      if (syncingScroll || editorShell.classList.contains('preview-hidden')) return;
+      syncingScroll = true;
+      applyScrollRatio(target, scrollRatio(source));
+      requestAnimationFrame(() => {
+        syncingScroll = false;
+      });
+    };
+
+    const toggleFullscreen = async () => {
+      try {
+        let isFullscreen = false;
+        if (isDesktop && window.marginApp.toggleFullscreen) {
+          isFullscreen = await window.marginApp.toggleFullscreen();
+        } else if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+          isFullscreen = true;
+        } else {
+          await document.exitFullscreen();
+          isFullscreen = false;
+        }
+        focusBtn.classList.toggle('active', isFullscreen);
+      } catch (error) {
+        console.warn(error);
+        showToast('全屏切换失败');
+      }
+    };
+
+    const connectVault = async (vault) => {
+      desktopVaultPath = vault.path;
+      vaultName.textContent = vault.name || vault.path.split('/').pop() || 'Vault';
+      vaultDot.classList.add('active');
+      vaultGate.classList.remove('show');
+      saveDraftToLocalStorage();
+      await writeToVault();
+      showToast(`已连接 ${vaultName.textContent}`);
+    };
+
+    const renderVaultCandidates = () => {
+      vaultCandidates.innerHTML = '';
+
+      if (!obsidianVaults.length) {
+        const empty = document.createElement('div');
+        empty.className = 'vault-choice empty';
+        empty.innerHTML = '<div><strong>未检测到 Obsidian Vault</strong><span>可以手动选择一个本机文件夹作为 Vault</span></div><span class="tag">手动</span>';
+        vaultCandidates.appendChild(empty);
+        return;
+      }
+
+      obsidianVaults.forEach((vault) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'vault-choice';
+        button.innerHTML = `
+          <div>
+            <strong>${escapeHtml(vault.name)}</strong>
+            <span>${escapeHtml(vault.path)}</span>
+          </div>
+          <span class="tag">${vault.open ? '当前' : 'Vault'}</span>
+        `;
+        button.addEventListener('click', async () => {
+          try {
+            await connectVault(vault);
+          } catch (error) {
+            console.warn(error);
+            showToast('连接 Vault 失败');
+          }
+        });
+        vaultCandidates.appendChild(button);
+      });
+    };
+
+    const loadObsidianVaults = async () => {
+      if (!isDesktop || !window.marginApp.listObsidianVaults) {
+        obsidianVaults = [];
+        renderVaultCandidates();
+        return;
+      }
+
+      try {
+        obsidianVaults = await window.marginApp.listObsidianVaults();
+      } catch (error) {
+        console.warn(error);
+        obsidianVaults = [];
+      }
+
+      renderVaultCandidates();
+    };
+
+    const requireVaultOnFirstOpen = async () => {
+      if (!isDesktop || desktopVaultPath) return;
+      await loadObsidianVaults();
+      vaultGate.classList.add('show');
     };
 
     const createDocId = () => `doc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1675,10 +1914,14 @@
     };
 
     const render = () => {
+      const ratio = scrollRatio(writingPane);
       preview.innerHTML = markdownToHtml(buildMarkdown());
       updateStats();
       updateFileMeta();
       resizeEditor();
+      if (!editorShell.classList.contains('preview-hidden')) {
+        applyScrollRatio(previewPane, ratio);
+      }
     };
 
     const getTargetDirectory = async () => {
@@ -1750,12 +1993,7 @@
           const result = await window.marginApp.chooseVault();
           if (result.canceled) return;
 
-          desktopVaultPath = result.path;
-          vaultName.textContent = result.name;
-          vaultDot.classList.add('active');
-          saveDraftToLocalStorage();
-          await writeToVault();
-          showToast(`已连接 ${result.name}`);
+          await connectVault(result);
         } catch (error) {
           console.warn(error);
           showToast('目录授权未完成');
@@ -2113,6 +2351,7 @@
     });
 
     chooseVaultBtn.addEventListener('click', chooseVault);
+    manualVaultBtn.addEventListener('click', chooseVault);
     exportBtn.addEventListener('click', exportMarkdown);
     importAssetBtn.addEventListener('click', importAsset);
     saveNowBtn.addEventListener('click', async () => {
@@ -2128,9 +2367,7 @@
     newDocBtn.addEventListener('click', createNewDoc);
 
     focusBtn.addEventListener('click', () => {
-      document.body.classList.toggle('focus-mode');
-      focusBtn.classList.toggle('active');
-      resizeEditor();
+      toggleFullscreen();
     });
 
     editModeBtn.addEventListener('click', () => {
@@ -2143,7 +2380,16 @@
       editorShell.classList.remove('preview-hidden');
       splitModeBtn.classList.add('active');
       editModeBtn.classList.remove('active');
+      applyScrollRatio(previewPane, scrollRatio(writingPane));
     });
+
+    writingPane.addEventListener('scroll', () => {
+      syncPreviewScroll(writingPane, previewPane);
+    }, { passive: true });
+
+    previewPane.addEventListener('scroll', () => {
+      syncPreviewScroll(previewPane, writingPane);
+    }, { passive: true });
 
     document.addEventListener('keydown', (event) => {
       const command = event.metaKey || event.ctrlKey;
@@ -2173,6 +2419,7 @@
     loadDraftFromLocalStorage();
     render();
     scheduleSave();
+    requireVaultOnFirstOpen();
   </script>
 </body>
 </html>

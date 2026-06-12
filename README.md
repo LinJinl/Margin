@@ -9,6 +9,7 @@ Margin 是一个 macOS Markdown 写作应用，用来把文章草稿直接沉淀
 - 以 Markdown 写作为核心，支持实时预览。
 - 输入 `/` 可以快速插入大标题、小标题、引用、列表、待办、代码块、Obsidian Callout 和分割线。
 - 点击「选择 Vault」后，可以选择本机 Obsidian Vault 根目录。
+- 首次打开会读取 Obsidian 配置中的 Vault 列表，让用户先选择一个 Vault。
 - 可以设置保存目录，例如 `posts/{year}`。
 - 可以设置资源目录和资源子目录，例如 `public/images` + `{title}`。
 - 插入图片时，Margin 会把图片复制到资源目录，并在正文中插入相对 Markdown 图片链接。

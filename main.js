@@ -63,6 +63,40 @@ const uniqueFilePath = async (directory, fileName) => {
   }
 };
 
+const readObsidianVaults = async () => {
+  if (process.platform !== 'darwin') return [];
+
+  const configPath = path.join(app.getPath('appData'), 'obsidian', 'obsidian.json');
+  try {
+    const content = await fs.readFile(configPath, 'utf8');
+    const config = JSON.parse(content);
+    const vaults = Object.entries(config.vaults || {})
+      .map(([id, vault]) => ({
+        id,
+        path: String(vault.path || ''),
+        name: path.basename(String(vault.path || '')) || 'Vault',
+        openedAt: Number(vault.ts || 0),
+        open: Boolean(vault.open),
+      }))
+      .filter((vault) => vault.path)
+      .sort((left, right) => Number(right.open) - Number(left.open) || right.openedAt - left.openedAt);
+
+    const existingVaults = [];
+    for (const vault of vaults) {
+      try {
+        const stat = await fs.stat(vault.path);
+        if (stat.isDirectory()) existingVaults.push(vault);
+      } catch {
+        // Ignore stale Obsidian vault entries.
+      }
+    }
+
+    return existingVaults;
+  } catch {
+    return [];
+  }
+};
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     {
@@ -131,6 +165,15 @@ ipcMain.handle('choose-vault', async () => {
     path: vaultPath,
     name: path.basename(vaultPath),
   };
+});
+
+ipcMain.handle('list-obsidian-vaults', async () => readObsidianVaults());
+
+ipcMain.handle('toggle-fullscreen', () => {
+  if (!mainWindow) return false;
+  const nextState = !mainWindow.isFullScreen();
+  mainWindow.setFullScreen(nextState);
+  return nextState;
 });
 
 ipcMain.handle('save-markdown', async (_event, payload) => {
