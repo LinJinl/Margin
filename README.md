@@ -74,6 +74,20 @@ npm install
 npm run dev
 ```
 
+开发模式会监听 `main.js`、`preload.js` 和 `index.html`，保存后自动重启应用。也可以在任意目录直接运行：
+
+```bash
+margin-dev
+```
+
+安装到当前用户的 macOS 应用目录：
+
+```bash
+npm run install:mac
+```
+
+安装后应用位于 `~/Applications/Margin.app`。
+
 打包 macOS 应用：
 
 ```bash

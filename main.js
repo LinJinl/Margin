@@ -21,6 +21,12 @@ const createWindow = () => {
   });
 
   mainWindow.loadFile('index.html');
+
+  if (process.env.MARGIN_DEVTOOLS === '1') {
+    mainWindow.webContents.once('did-finish-load', () => {
+      mainWindow.webContents.openDevTools({ mode: 'detach' });
+    });
+  }
 };
 
 const isInside = (parent, child) => {

@@ -7,8 +7,12 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dev": "electron .",
-    "package:mac": "electron-builder --mac"
+    "dev": "node scripts/dev-watch.js",
+    "dev:debug": "MARGIN_DEVTOOLS=1 node scripts/dev-watch.js",
+    "package:mac": "electron-builder --mac",
+    "package:mac:dir": "electron-builder --mac --dir",
+    "install:mac": "npm run package:mac:dir && node scripts/install-macos.js",
+    "open:mac": "open \"$HOME/Applications/Margin.app\""
   },
   "build": {
     "appId": "app.margin.writer",

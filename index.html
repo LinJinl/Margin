@@ -1181,6 +1181,8 @@
     const headingCountBadge = document.querySelector('#headingCountBadge');
     const fileNameTag = document.querySelector('#fileNameTag');
     const slashMenu = document.querySelector('#slashMenu');
+    const noteList = document.querySelector('#noteList');
+    const navButtons = [...document.querySelectorAll('.nav-item')];
 
     let directoryHandle = null;
     let desktopVaultPath = '';
@@ -1206,6 +1208,42 @@
       { id: 'callout', icon: '!', title: 'Obsidian Callout', hint: '> [!note] 提示块', keywords: 'callout note obsidian tip tishi 提示', text: '> [!note] ', caretOffset: 10 },
       { id: 'divider', icon: 'HR', title: '分割线', hint: '---', keywords: 'divider hr fenge 分割线', text: '---\n', caretOffset: 4 },
     ];
+    const spaces = [
+      { id: 'writing', label: '正在写' },
+      { id: 'drafts', label: '草稿箱' },
+      { id: 'saved', label: '已沉淀' },
+    ];
+    const initialDocument = {
+      id: 'writing-system',
+      title: titleInput.value,
+      space: 'writing',
+      location: 'Writing/Inbox',
+      content: editor.value,
+      updatedAt: new Date().toISOString(),
+    };
+    const seedDocuments = [
+      initialDocument,
+      {
+        id: 'personal-knowledge-base',
+        title: '产品思考：AI 时代的个人知识库',
+        space: 'drafts',
+        location: 'Essays/Product',
+        content: '# 产品思考：AI 时代的个人知识库\n\nAI 让输入和整理变得更快，但个人知识库仍然需要稳定的结构、明确的归档路径和可复用的写作出口。\n\n## 核心判断\n\n工具应该帮人减少搬运，而不是制造新的存放位置。',
+        updatedAt: new Date(Date.now() - 86400000).toISOString(),
+      },
+      {
+        id: 'fragment-to-essay',
+        title: '从碎片到文章的整理流程',
+        space: 'saved',
+        location: 'Writing/System',
+        content: '# 从碎片到文章的整理流程\n\n碎片记录只有进入固定流程，才会变成可发布、可复用的文章。\n\n## 流程\n\n- 捕捉原始想法\n- 合并同类主题\n- 补齐上下文\n- 输出成完整文章',
+        updatedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+      },
+    ];
+
+    let documents = seedDocuments.map((document) => ({ ...document }));
+    let activeDocId = initialDocument.id;
+    let activeSpace = 'writing';
 
     const escapeHtml = (value) => value
       .replace(/&/g, '&amp;')
@@ -1291,7 +1329,99 @@
       saveState.textContent = message;
     };
 
+    const createDocId = () => `doc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const activeDocument = () => documents.find((doc) => doc.id === activeDocId) || documents[0];
+
+    const documentLabel = (doc) => {
+      if (!doc.updatedAt) return '草稿';
+      const updated = new Date(doc.updatedAt);
+      const now = new Date();
+      const dayDiff = Math.floor((now.setHours(0, 0, 0, 0) - updated.setHours(0, 0, 0, 0)) / 86400000);
+      if (dayDiff <= 0) return '今天';
+      if (dayDiff === 1) return '昨日';
+      if (dayDiff < 7) return `${dayDiff}天前`;
+      return updated.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+    };
+
+    const normalizeDocument = (doc, fallbackIndex = 0) => ({
+      id: doc.id || createDocId(),
+      title: doc.title || `未命名笔记 ${fallbackIndex + 1}`,
+      space: spaces.some((space) => space.id === doc.space) ? doc.space : 'writing',
+      location: doc.location || 'Writing/Inbox',
+      content: doc.content || '',
+      updatedAt: doc.updatedAt || new Date().toISOString(),
+    });
+
+    const persistActiveDocument = () => {
+      const doc = activeDocument();
+      if (!doc) return;
+      doc.title = titleInput.value.trim() || 'Untitled';
+      doc.content = editor.value;
+      doc.location = resolvedNotePath() || 'Writing/Inbox';
+      doc.updatedAt = new Date().toISOString();
+    };
+
+    const applyDocument = (doc) => {
+      titleInput.value = doc.title;
+      editor.value = doc.content;
+    };
+
+    const renderSpaces = () => {
+      navButtons.forEach((button, index) => {
+        const space = spaces[index];
+        if (!space) return;
+        button.dataset.space = space.id;
+        button.classList.toggle('active', space.id === activeSpace);
+        const tag = button.querySelector('.tag');
+        if (tag) {
+          tag.textContent = documents.filter((doc) => doc.space === space.id).length;
+        }
+      });
+    };
+
+    const renderRecent = () => {
+      const visibleDocuments = documents
+        .filter((doc) => doc.space === activeSpace)
+        .sort((left, right) => new Date(right.updatedAt) - new Date(left.updatedAt));
+
+      noteList.innerHTML = '';
+
+      if (!visibleDocuments.length) {
+        const empty = document.createElement('li');
+        empty.innerHTML = '<button class="note-item" type="button"><span class="note-main"><strong>暂无文档</strong><span>点击新建开始写作</span></span><span class="tag">空</span></button>';
+        noteList.appendChild(empty);
+        return;
+      }
+
+      visibleDocuments.forEach((doc) => {
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `note-item${doc.id === activeDocId ? ' active' : ''}`;
+        button.innerHTML = `
+          <span class="note-main">
+            <strong>${escapeHtml(doc.title)}</strong>
+            <span>${escapeHtml(doc.location)}</span>
+          </span>
+          <span class="tag">${escapeHtml(documentLabel(doc))}</span>
+        `;
+        button.addEventListener('click', () => {
+          switchDocument(doc.id);
+        });
+        item.appendChild(button);
+        noteList.appendChild(item);
+      });
+    };
+
+    const renderSidebar = () => {
+      renderSpaces();
+      renderRecent();
+    };
+
     const saveDraftToLocalStorage = () => {
+      persistActiveDocument();
+      renderSidebar();
       localStorage.setItem(storageKey, JSON.stringify({
         title: titleInput.value,
         path: pathInput.value,
@@ -1301,29 +1431,101 @@
         autoSave: autoSaveToggle.checked,
         vaultPath: desktopVaultPath,
         vaultName: vaultName.textContent,
+        activeDocId,
+        activeSpace,
+        documents,
         updatedAt: new Date().toISOString(),
       }));
     };
 
     const loadDraftFromLocalStorage = () => {
       const saved = localStorage.getItem(storageKey);
-      if (!saved) return;
+      if (!saved) {
+        renderSidebar();
+        return;
+      }
       try {
         const data = JSON.parse(saved);
-        titleInput.value = data.title || titleInput.value;
         pathInput.value = data.path || pathInput.value;
         assetRootInput.value = data.assetRoot || assetRootInput.value;
         assetGroupInput.value = data.assetGroup || assetGroupInput.value;
-        editor.value = data.content || editor.value;
         autoSaveToggle.checked = data.autoSave !== false;
+
+        if (Array.isArray(data.documents) && data.documents.length) {
+          documents = data.documents.map(normalizeDocument);
+          activeDocId = data.activeDocId || documents[0].id;
+          activeSpace = spaces.some((space) => space.id === data.activeSpace) ? data.activeSpace : 'writing';
+          if (!documents.some((doc) => doc.id === activeDocId)) {
+            activeDocId = documents[0].id;
+          }
+          applyDocument(activeDocument());
+        } else {
+          documents = [normalizeDocument({
+            id: 'migrated-draft',
+            title: data.title || titleInput.value,
+            space: 'writing',
+            location: data.path || pathInput.value,
+            content: data.content || editor.value,
+            updatedAt: data.updatedAt,
+          })];
+          activeDocId = documents[0].id;
+          activeSpace = 'writing';
+          applyDocument(documents[0]);
+        }
+
         if (isDesktop && data.vaultPath) {
           desktopVaultPath = data.vaultPath;
           vaultName.textContent = data.vaultName || data.vaultPath.split('/').pop() || 'Vault';
           vaultDot.classList.add('active');
         }
+        renderSidebar();
       } catch (error) {
         console.warn(error);
+        documents = seedDocuments.map((document) => ({ ...document }));
+        activeDocId = initialDocument.id;
+        activeSpace = 'writing';
+        renderSidebar();
       }
+    };
+
+    const switchDocument = (documentId) => {
+      if (documentId === activeDocId) return;
+      persistActiveDocument();
+      activeDocId = documentId;
+      const nextDocument = activeDocument();
+      applyDocument(nextDocument);
+      render();
+      saveDraftToLocalStorage();
+      setSaveState(`已打开 ${nextDocument.title}`);
+    };
+
+    const switchSpace = (spaceId) => {
+      if (spaceId === activeSpace) return;
+      persistActiveDocument();
+      activeSpace = spaceId;
+      const nextDocument = documents
+        .filter((doc) => doc.space === activeSpace)
+        .sort((left, right) => new Date(right.updatedAt) - new Date(left.updatedAt))[0];
+      if (nextDocument) {
+        activeDocId = nextDocument.id;
+        applyDocument(nextDocument);
+        render();
+        setSaveState(`已打开 ${nextDocument.title}`);
+      }
+      renderSidebar();
+      saveDraftToLocalStorage();
+    };
+
+    const nextUntitledTitle = () => {
+      const base = `未命名笔记 ${new Date().toISOString().slice(0, 10)}`;
+      const existingTitles = new Set(documents.map((doc) => doc.title));
+      if (!existingTitles.has(base)) return base;
+
+      let index = 2;
+      while (existingTitles.has(`${base} ${index}`)) {
+        index += 1;
+      }
+      return `${base} ${index}`;
     };
 
     const inlineMarkdown = (line) => escapeHtml(line)
@@ -1829,10 +2031,22 @@
     };
 
     const createNewDoc = () => {
-      const date = new Date().toISOString().slice(0, 10);
-      titleInput.value = `未命名笔记 ${date}`;
-      editor.value = `# ${titleInput.value}\n\n`;
+      persistActiveDocument();
+      const title = nextUntitledTitle();
+      const nextSpace = spaces.some((space) => space.id === activeSpace) ? activeSpace : 'writing';
+      const doc = {
+        id: createDocId(),
+        title,
+        space: nextSpace,
+        location: resolvedNotePath() || 'Writing/Inbox',
+        content: `# ${title}\n\n`,
+        updatedAt: new Date().toISOString(),
+      };
+      documents.unshift(doc);
+      activeDocId = doc.id;
+      applyDocument(doc);
       render();
+      renderSidebar();
       scheduleSave();
       editor.focus();
     };
@@ -1887,6 +2101,15 @@
 
     assetGroupInput.addEventListener('input', () => {
       saveDraftToLocalStorage();
+    });
+
+    navButtons.forEach((button, index) => {
+      const space = spaces[index];
+      if (!space) return;
+      button.dataset.space = space.id;
+      button.addEventListener('click', () => {
+        switchSpace(space.id);
+      });
     });
 
     chooseVaultBtn.addEventListener('click', chooseVault);
